@@ -246,3 +246,46 @@ func Fprint(w io.Writer, err error) {
 		err = cause.Cause()
 	}
 }
+
+// Sprint concatenates the output using the supplied join string as the
+// separator.
+// If err is nil, a blank string is returned
+func Sprint(err error, sep string) string {
+	type location interface {
+		Location() (string, int)
+	}
+	type message interface {
+		Message() string
+	}
+
+	if sep == "" {
+		sep = " > "
+	}
+
+	var m []string
+	var part string
+	for err != nil {
+		if err, ok := err.(location); ok {
+			file, line := err.Location()
+			part = fmt.Sprintf("%s:%d: ", file, line)
+		}
+
+		switch err := err.(type) {
+		case message:
+			part = part + err.Message()
+		default:
+			part = part + err.Error()
+		}
+
+		m = append(m, part)
+		part = ""
+
+		cause, ok := err.(causer)
+		if !ok {
+			break
+		}
+		err = cause.Cause()
+	}
+
+	return strings.Join(m, sep)
+}

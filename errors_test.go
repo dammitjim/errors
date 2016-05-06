@@ -145,6 +145,58 @@ func TestFprint(t *testing.T) {
 	}
 }
 
+func TestSprint(t *testing.T) {
+	x := New("error")
+	tests := []struct {
+		err  error
+		sep  string
+		want string
+	}{{
+		// nil error is nil
+		err: nil,
+		sep: "",
+	}, {
+		// explicit nil error is nil
+		err:  (error)(nil),
+		sep:  " > ",
+		want: "",
+	}, {
+		// uncaused error is unaffected
+		err:  io.EOF,
+		sep:  " > ",
+		want: "EOF",
+	}, {
+		// caused error returns cause
+		err:  &causeError{cause: io.EOF},
+		sep:  " > ",
+		want: "cause error > EOF",
+	}, {
+		err:  x, // return from errors.New
+		sep:  " | ",
+		want: "github.com/pkg/errors/errors_test.go:149: error",
+	}, {
+		err:  Wrap(x, "message"),
+		sep:  "",
+		want: "github.com/pkg/errors/errors_test.go:178: message > github.com/pkg/errors/errors_test.go:149: error",
+	}, {
+		err:  Wrap(Wrap(x, "message"), "another message"),
+		sep:  "\n",
+		want: "github.com/pkg/errors/errors_test.go:182: another message\ngithub.com/pkg/errors/errors_test.go:182: message\ngithub.com/pkg/errors/errors_test.go:149: error",
+	}, {
+		err:  Wrapf(x, "message"),
+		sep:  " | ",
+		want: "github.com/pkg/errors/errors_test.go:186: message | github.com/pkg/errors/errors_test.go:149: error",
+	}}
+
+	for i, tt := range tests {
+		var s string
+		s = Sprint(tt.err, tt.sep)
+		if s != tt.want {
+			t.Errorf("test %d: Sprint(w, %q): got %q, want %q", i+1, tt.err, s, tt.want)
+		}
+	}
+}
+
 func TestWrapfNil(t *testing.T) {
 	got := Wrapf(nil, "no error")
 	if got != nil {
